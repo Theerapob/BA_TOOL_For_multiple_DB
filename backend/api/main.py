@@ -186,10 +186,11 @@ def _prune_column_diagnostics(data: dict, table_name: str, column_name: str) -> 
 def _make_export_filename(table_names: list[str], ext: str) -> str:
     """สร้างชื่อไฟล์จากชื่อ table ทั้งหมด + _confluent"""
     clean = [re.sub(r"[^\w]", "_", t) for t in table_names]
-    joined = "_".join(clean)
-    # ตัดให้ไม่เกิน 200 chars ก่อน suffix
-    if len(joined) > 200:
-        joined = joined[:200]
+    if len(clean) > 5:
+        # ใช้ชื่อตารางแรก + จำนวนที่เหลือ แทนการตัดกลางคำ
+        joined = f"{clean[0]}_and_{len(clean) - 1}_more"
+    else:
+        joined = "_".join(clean)
     return f"{joined}_confluent.{ext}"
 
 
@@ -491,7 +492,7 @@ def export_all(session_id: str, tables: List[str] = Query(default=None)):
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={_make_export_filename(list(selected.keys()), 'xlsx')}"},
+        headers={"Content-Disposition": f'attachment; filename="{_make_export_filename(list(selected.keys()), "xlsx")}"'},
     )
 
 @app.get("/export/{session_id}/xlsx/{table_name}")
@@ -520,7 +521,7 @@ def export_one(session_id: str, table_name: str):
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={_make_export_filename([table_name], 'xlsx')}"},
+        headers={"Content-Disposition": f'attachment; filename="{_make_export_filename([table_name], "xlsx")}"'},
     )
 
 @app.get("/export/{session_id}/csv")
@@ -534,7 +535,7 @@ def export_all_csv_endpoint(session_id: str, tables: List[str] = Query(default=N
     return StreamingResponse(
         buf,
         media_type="text/csv; charset=utf-8-sig",
-        headers={"Content-Disposition": f"attachment; filename={_make_export_filename(list(selected.keys()), 'csv')}"},
+        headers={"Content-Disposition": f'attachment; filename="{_make_export_filename(list(selected.keys()), "csv")}"'},
     )
 
 @app.get("/export/{session_id}/csv/{table_name}")
@@ -549,5 +550,5 @@ def export_one_csv(session_id: str, table_name: str):
     return StreamingResponse(
         buf,
         media_type="text/csv; charset=utf-8-sig",
-        headers={"Content-Disposition": f"attachment; filename={_make_export_filename([table_name], 'csv')}"},
+        headers={"Content-Disposition": f'attachment; filename="{_make_export_filename([table_name], "csv")}"'},
     )

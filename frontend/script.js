@@ -874,7 +874,9 @@ function triggerDownload(blob, filename) {
 
 function makeExportFilename(tableKeys, ext) {
   const clean = tableKeys.map(k => k.replace(/[^\w]/g, '_'));
-  const joined = clean.join('_').substring(0, 200);
+  const joined = clean.length > 5
+    ? `${clean[0]}_and_${clean.length - 1}_more`
+    : clean.join('_');
   return `${joined}_confluent.${ext}`;
 }
 
@@ -1691,10 +1693,9 @@ function showTableSelectorModal(fmt) {
 async function doExportSelected(fmt, selectedKeys) {
   if (!selectedKeys.length) return;
   const qs  = selectedKeys.map(k => `tables=${encodeURIComponent(k)}`).join('&');
-  const url = `${API_BASE}/export/${sessionId}/${fmt}?${qs}`;
   setLoading(true);
   try {
-    const res = await fetch(url);
+    const res = await fetchWithApiFallback(`/export/${sessionId}/${fmt}?${qs}`);
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || res.statusText);
     triggerDownload(await res.blob(), makeExportFilename(selectedKeys, fmt));
     showStatus('convertStatus', 'success', `✓ Export ${fmt.toUpperCase()} สำเร็จ (${selectedKeys.length} tables)`);
