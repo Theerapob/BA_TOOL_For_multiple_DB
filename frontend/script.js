@@ -1564,12 +1564,72 @@ function toggleLogsPanel() {
   document.getElementById('logsPanelCard')?.classList.toggle('collapsed');
 }
 
+
+// ════════════════════════════════════════════════════════════════════════════
+//  MAINTENANCE MODE — polling จาก Admin Console
+// ════════════════════════════════════════════════════════════════════════════
+
+let _inMaintenance   = false;
+let _maintPollTimer  = null;
+const MAINT_POLL_MS  = 30_000;   // ตรวจทุก 30 วิ
+
+/** แสดง/ซ่อน overlay และ disable ทุก interaction */
+function _applyMaintenanceUI(active, reason = '') {
+  const overlay = document.getElementById('maintenanceOverlay');
+  if (!overlay) return;
+
+  if (active === _inMaintenance && overlay.style.display === (active ? 'flex' : 'none')) return; // ไม่มีการเปลี่ยนแปลง
+
+  _inMaintenance = active;
+  overlay.style.display = active ? 'flex' : 'none';
+
+  // reason text
+  const reasonEl = document.getElementById('maintenanceReason');
+  if (reasonEl) reasonEl.textContent = reason ? `💬 ${reason}` : '';
+
+  // อัปเดต status dot ใน topbar
+  const dot = document.getElementById('backendDot');
+  const lbl = document.getElementById('backendLabel');
+  if (active) {
+    if (dot) dot.className = 'status-dot maintenance';
+    if (lbl) lbl.textContent = '🔧 Maintenance';
+  } else {
+    // คืนค่าให้ checkHealth จัดการ
+    checkHealth();
+  }
+}
+
+/** poll maintenance API แล้ว apply UI */
+async function checkMaintenance() {
+  try {
+    const res = await fetch(`${API_BASE}/system/maintenance`);
+    if (!res.ok) return; // ถ้า API ล่ม ไม่ block user
+    const payload = await res.json();
+    const active  = payload?.data?.maintenance ?? false;
+
+    let reason = '';
+    if (active) {
+      try {
+        const rRes = await fetch(`${API_BASE}/system/maintenance/reason`);
+        const rPay = await rRes.json();
+        reason = rPay?.data?.reason ?? '';
+      } catch { /* ignore */ }
+    }
+
+    _applyMaintenanceUI(active, reason);
+  } catch {
+    // ถ้า network fail ให้ผ่านไปก่อน (fail-open) ไม่ block user
+  }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   setTheme(localStorage.getItem('theme') || 'dark');
+  checkMaintenance();                          // ตรวจ maintenance ก่อนเลย
   checkHealth();
   loadDbPairs();
   initProcessingLogs();
-  setInterval(checkHealth, 30_000);
+  setInterval(checkHealth,       30_000);
+  setInterval(checkMaintenance,  30_000);      // poll ทุก 30 วิ
 });
 
 // ── Download XLSX ─────────────────────────────────────────

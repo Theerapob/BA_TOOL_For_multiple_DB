@@ -154,7 +154,9 @@ body {
 }
 
 .status-dot.online  { background: var(--accent);  box-shadow: 0 0 6px var(--accent); }
-.status-dot.offline { background: var(--danger);  box-shadow: 0 0 6px var(--danger); }
+.status-dot.offline      { background: var(--danger);  box-shadow: 0 0 6px var(--danger); }
+.status-dot.maintenance  { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; animation: maint-blink 1.4s infinite; }
+@keyframes maint-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
 .backend-label {
   font-family: var(--mono);
